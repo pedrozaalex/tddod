@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.30.0)
 
 # Define LINUX
 if (UNIX AND NOT APPLE)
@@ -49,9 +49,9 @@ list(APPEND libs ${OPENGL_LIBRARIES})
 
 # SDL2
 set(HAVE_LIBC ON)
-add_subdirectory(./thirdparty/SDL-mirror/)
-list(APPEND libs SDL2-static)
-list(APPEND includes PUBLIC ./thirdparty/SDL-mirror/include/)
+add_subdirectory(./thirdparty/SDL/)
+list(APPEND libs SDL3-static)
+list(APPEND includes PUBLIC ./thirdparty/SDL/include/SDL3)
 
 # gl3w
 list(APPEND includes PUBLIC ./thirdparty/gl3w/include/)

@@ -14,7 +14,6 @@ namespace Game
     void init(Registry &registry);
     void updateSim(Registry &registry, float dt);
     void update(Registry &registry, float dt);
-    void updateAudio(Registry &registry, uint8_t *buffer, int len);
     void render(Registry &registry);
 };
 

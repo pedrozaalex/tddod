@@ -8,7 +8,7 @@
 #endif
 
 #include <GL/gl3w.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <chrono>
 #include <stdio.h>
@@ -17,8 +17,7 @@
 #include "game.h"
 
 #include "helpers/InputHelpers.h"
-
-void audioCallback(void *userdata, Uint8 *stream, int len);
+#include "systems/AudioMixerSystem.h"
 
 #if defined(WIN32)
 int CALLBACK WinMain(HINSTANCE appInstance, HINSTANCE prevInstance, LPSTR cmdLine, int cmdCount)
@@ -30,9 +29,8 @@ int main(int argc, char** argv)
     SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO);
     auto sdlWindow = SDL_CreateWindow(
         "Data Oriented Tower Defense",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         WIDTH, HEIGHT,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+        SDL_WINDOW_OPENGL);
 
     // Init OpenGL
     auto glContext = SDL_GL_CreateContext(sdlWindow);
@@ -43,20 +41,12 @@ int main(int argc, char** argv)
     Registry registry;
     Game::init(registry);
 
-    // Init audio
-    SDL_AudioSpec audioSpec;
-    memset(&audioSpec, 0, sizeof(SDL_AudioSpec));
-    audioSpec.freq = 44100;
-    audioSpec.format = AUDIO_S16LSB;
-    audioSpec.callback = audioCallback;
-    audioSpec.channels = 2;
-    audioSpec.samples = 4096 / 4;
-    audioSpec.userdata = &registry;
-    if (SDL_OpenAudio(&audioSpec, NULL) < 0)
-    {
-        assert(false);
+    // Init audio with SDL3 audio stream
+    SDL_AudioStream *audioStream = nullptr;
+    initAudioMixerSystem(&audioStream);
+    if (!audioStream) {
+        SDL_Log("Failed to initialize audio system");
     }
-    SDL_PauseAudio(0);
 
     // Main loop
     int updateSpeed = 1;
@@ -71,35 +61,34 @@ int main(int argc, char** argv)
         auto dt = (float)((double)std::chrono::duration_cast<std::chrono::microseconds>(diffTime).count() / 1000000.0);
 
         // Poll events
-        //SDL_LockAudio();
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
             switch (event.type)
             {
-            case SDL_QUIT:
+            case SDL_EVENT_QUIT:
                 done = true;
                 break;
-            case SDL_KEYDOWN:
-                if (event.key.keysym.sym == SDLK_TAB) updateSpeed = 10;
-                else if (event.key.keysym.sym == SDLK_SPACE)
+            case SDL_EVENT_KEY_DOWN:
+                if (event.key.key == SDLK_TAB) updateSpeed = 10;
+                else if (event.key.key == SDLK_SPACE)
                 {
                     if (updateSpeed) updateSpeed = 0;
                     else updateSpeed = 1;
                 }
-                Input::onKeyDown(registry, event.key.keysym.sym);
+                Input::onKeyDown(registry, event.key.key);
                 break;
-            case SDL_KEYUP:
-                if (event.key.keysym.sym == SDLK_TAB) updateSpeed = 1;
-                Input::onKeyUp(registry, event.key.keysym.sym);
+            case SDL_EVENT_KEY_UP:
+                if (event.key.key == SDLK_TAB) updateSpeed = 1;
+                Input::onKeyUp(registry, event.key.key);
                 break;
-            case SDL_MOUSEBUTTONDOWN:
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
                 Input::onMouseButtonDown(registry, event.button.button);
                 break;
-            case SDL_MOUSEBUTTONUP:
+            case SDL_EVENT_MOUSE_BUTTON_UP:
                 Input::onMouseButtonUp(registry, event.button.button);
                 break;
-            case SDL_MOUSEMOTION:
+            case SDL_EVENT_MOUSE_MOTION:
                 Input::onMouseMotion(registry, event.motion.x, event.motion.y);
                 break;
             }
@@ -114,25 +103,21 @@ int main(int argc, char** argv)
         // Update UI stuff, independent from simulation
         Game::update(registry, dt);
 
+        // Update audio - feed the audio stream with mixed sound data
+        if (audioStream) {
+            updateAudioMixerSystem(registry, audioStream);
+        }
+
         // Draw game
         Game::render(registry);
-
-        //SDL_UnlockAudio();
 
         // Swap buffers
         SDL_GL_SwapWindow(sdlWindow);
     }
 
     // Cleanup
-    SDL_GL_DeleteContext(glContext);
+    cleanupAudioMixerSystem(audioStream);
+    SDL_GL_DestroyContext(glContext);
     SDL_DestroyWindow(sdlWindow);
     SDL_Quit();
-}
-
-void audioCallback(void *userdata, Uint8 *stream, int len)
-{
-    memset(stream, 0, len);
-
-    auto &registry = *(Registry*)userdata;
-    Game::updateAudio(registry, stream, len);
 }

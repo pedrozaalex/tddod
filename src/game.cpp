@@ -188,11 +188,6 @@ namespace Game
         updatePlaceSystem(registry);
     }
 
-    void updateAudio(Registry &registry, uint8_t *buffer, int len)
-    {
-        updateAudioMixerSystem(registry, buffer, len);
-    }
-
     void render(Registry &registry)
     {
         Rendering::beginFrame(registry);

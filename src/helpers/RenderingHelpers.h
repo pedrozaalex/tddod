@@ -8,6 +8,7 @@
 #include <GL/gl3w.h>
 
 #include <vector>
+#include <string>
 
 #include "ecs.h"
 
