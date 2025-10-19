@@ -6,7 +6,7 @@
 #define RESOURCES_H_INCLUDED
 
 #include <GL/gl3w.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 struct VertexPC;
 struct VertexPTC;
